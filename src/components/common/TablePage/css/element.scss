@@ -1,0 +1,36 @@
+.el-table td, .el-table th.is-leaf{border-bottom: none;text-align: center;}
+.el-table{font-size: 14px;}
+.el-table.el-table-target{color:#404040;font-size: 14px;}
+.el-table.el-table-target.el-table--enable-row-transition .el-table__body td{border-bottom: 10px solid white;}
+.el-table thead{font-size: 16px;}
+.el-table.el-table-target thead{color: #404040;font-size: 15px;}
+.el-table::before{height: 0;}
+.el-table .el-table__header {
+    width: initial!important;
+    border-collapse:separate; border-spacing:10px 0;
+}
+.el-table__body{
+   width: initial!important;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-collapse:separate; border-spacing:0px 15px
+}
+.el-table, .el-table__expanded-cell {background-color: transparent;}
+
+.el-pagination {text-align: center;}
+.el-pagination.is-background .el-pager li:not(.disabled).active {
+    background-color: #18dfab;
+    color: #fff;
+}
+.el-pagination.is-background .el-pager li:not(.disabled).active:hover {
+    color: #fff;
+}
+.el-pagination.is-background .el-pager li:not(.disabled):hover {
+    color: #18dfab;
+}
+.el-pager li:hover{color: white;}
+
+.el-dialog {
+    border-radius: 8px;
+}
+

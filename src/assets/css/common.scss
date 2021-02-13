@@ -1,0 +1,72 @@
+
+*{margin: 0;padding: 0;-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;}
+*:before,*:after{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box;}
+html,body{width: 100%;height: 100%;position: relative;font-family:'Helvetica Neue','Hiragino Sans GB','Microsoft YaHei',STHeiti,Helvetica,Arial,sans-serif;background-color: transparent;}
+ul li{list-style:none;}
+.full{top: 0;left: 0;right: 0;bottom: 0;}
+p{color: #404040;}
+.zindex{z-index: 30;}
+.clear{zoom:1;}
+.clear:after{content:"\0020"; display:block; height:0; clear:both; visibility:hidden;}
+.heiall{height: 100%;}
+.wall{width: 100%;}
+.lt{float:left;}
+.rt{float:right;}
+.boxs{box-sizing:border-box;-moz-box-sizing:border-box;-webkit-box-sizing:border-box;}
+.cusp{cursor:pointer;}
+.lineh{line-height: 25px;}
+
+.vtm{vertical-align:middle;}
+.vtt{vertical-align:top;}
+.disn{display:none;}
+.disb{display:block;}
+.disi{display:inline-block;}
+.posr{position:relative;}
+.posa{position:absolute;}
+.posf{position:fixed;}
+.txl{text-align:left;}
+.txc{text-align:center;}
+.txr{text-align:right;}
+.fwb{font-weight:bold;}
+
+.f12{font-size: 12px;}
+.f13{font-size: 13px;}
+.f14{font-size: 14px;}
+.f15{font-size: 15px;}
+.f16{font-size: 16px;}
+.f17{font-size: 17px;}
+.f18{font-size: 18px;}
+.f20{font-size: 20px;}
+.f24{font-size: 24px;}
+.white{color: #fff;}
+.heise{color: #404040;}
+
+.letter{letter-spacing: 2px;}
+
+.bdr5{border-radius: 5px;}
+.bdr20{border-radius: 20px;}
+.bdrq{border-radius: 100%;}
+
+.wtbg{background-color: white;}
+
+.mgr10{margin-right: 10px;}
+.mgl10{margin-left: 10px;}
+.mgl20{margin-left: 20px;}
+.mgl30{margin-left: 30px;}
+.mgt05{margin-top: 5px;}
+.mgt10{margin-top: 10px;}
+.mgt20{margin-top: 20px;}
+.mgt30{margin-top: 30px;}
+.mgt40{margin-top: 40px;}
+.mgb7{margin-bottom: 7px;}
+.mgb15{margin-bottom: 15px;}
+.pdb20{padding-bottom: 20px;}
+.pd20{padding: 20px;}
+.pd{padding: 10px 0;}
+.pdl20{padding-left: 20px;}
+
+.wid80{width: 80%;}
+/* 字体超出用省略号 */
+.ovfell{overflow: hidden;text-overflow:ellipsis;white-space: nowrap;}
+
+
