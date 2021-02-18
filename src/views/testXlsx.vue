@@ -10,13 +10,14 @@
         :multiple="false"
         :on-change="upload"
         :file-list="fileList">
-        <el-button size="small" type="primary">选择文件上传</el-button>
+        <el-button size="small" type="primary">{{uploading ? '文件上传中' : '选择文件上传'}}</el-button>
         <div slot="tip" class="el-upload__tip">只能xls或xlsx文件</div>
       </el-upload>
       <el-row class="input-ctrl">
         <el-col :span="6">合并层级：</el-col>
         <el-col :span="18">
-          <el-input  v-model="level" placeholder="请输入需要合并的层级"></el-input>
+          <el-input  v-model="level" placeholder="请输入需要合并的层级" @keyup.enter.native="toDealData"></el-input>
+          <p class="tips">tips: 按enter重新根据层级处理</p>
         </el-col>
       </el-row>
       <el-row class="input-ctrl">
@@ -29,6 +30,28 @@
         <el-button type="primary" @click="getExport">导出</el-button>
         <el-button  @click="reset">重置</el-button>
       </div>
+      <el-row class="input-ctrl">
+        <el-col :span="6">选择明细: </el-col>
+        <el-col :span="18">
+          <el-select v-model="selectValue" placeholder="请选择" style="width:100%">
+            <el-option
+              v-for="(value, key) in dealData"
+              :key="key"
+              :label="key"
+              :value="key">
+            </el-option>
+          </el-select>
+        </el-col>
+      </el-row>
+      <el-row class="input-ctrl">
+        <el-col :span="6">明细表格名称：</el-col>
+        <el-col :span="18">
+          <el-input  v-model="subName" placeholder="请输入导出的表格名称"></el-input>
+        </el-col>
+      </el-row>
+      <div>
+        <el-button type="primary" @click="downLoadDetail">导出明细</el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -37,23 +60,29 @@ import XLSX from 'xlsx'
 export default {
   data () {
     return {
-      // todo
+      currentData: [],
       tmpData: [], // 暂存的数据
       fileList: [],
-      level: 2,
+      level: 3,
       uploading: false,
-      name: 'new'
+      name: 'new',
+      options: [],
+      selectValue: '',
+      subName: '明细表名称',
+      dealData: []
     }
   },
   methods: {
     reset () {
       this.tmpData = []
       this.fileList = []
+      this.dealData = []
+      this.selectValue = ''
     },
     upload(file, fileList) {
       if (fileList.length > 1) {
         this.$message.error('最多只能上传一个文件哦！')
-        this.fileList = []
+        this.reset()
         return false
       }
       this.uploading = true
@@ -71,40 +100,25 @@ export default {
     
             const fileReader = new FileReader();
             fileReader.onload = (ev) => {
-                try {
-                    const data = ev.target.result;
-                    const workbook = XLSX.read(data, {
-                        type: 'binary'
-                    });
-                    const wsname = workbook.SheetNames[0];//取第一张表
-                    const result = XLSX.utils.sheet_to_json(workbook.Sheets[wsname]);//生成json表格内容
-                    result.sort((a, b) => {
-                      if (a['科目编号'] && b['科目编号']) {
-                        const aR = a['科目编号'].split('-')
-                        const bR = b['科目编号'].split('-')
-                        let aStr = this.getStr(aR)
-                        let bStr = this.getStr(bR)
-                        const len = aStr.length - bStr.length
-                        if (len >= 0) {
-                          bStr = bStr.padEnd(aStr.length,'0');
-                        } else {
-                          aStr = aStr.padEnd(bStr.length,'0');
-                        }
-                        return aStr - bStr
-                      } else {
-                        return true
-                      }
-                    })
-                   this.tmpData = result
-                   this.uploading = false
-                } catch (e) {
-                  console.log(e)
-                  this.uploading = false
-                  this.$message.error('您选择的文件可能有些问题，请检查格式是否正确呢！')
-                    return false;
-                }
-            };
-            fileReader.readAsBinaryString(files[0]);
+              try {
+                  const data = ev.target.result;
+                  const workbook = XLSX.read(data, {
+                      type: 'binary'
+                  });
+                  const wsname = workbook.SheetNames[0];//取第一张表
+                  const result = XLSX.utils.sheet_to_json(workbook.Sheets[wsname]);//生成json表格内容
+                  result.sort(this.compare('科目编号'))
+                 this.tmpData = result
+                 this.getLevelTotal(JSON.parse(JSON.stringify(this.tmpData)), parseInt(this.level))
+                 this.uploading = false
+              } catch (e) {
+                this.uploading = false
+                this.reset()
+                this.$message.error('您选择的文件可能有些问题，请检查格式是否正确呢！')
+                  return false;
+              }
+            }
+            fileReader.readAsBinaryString(files[0])
     },
     getExport () {
       if (this.uploading) {
@@ -115,26 +129,62 @@ export default {
         this.$message.error('您还没有选择文件呀！')
         return false
       }
-      this.getLevelTotal(JSON.parse(JSON.stringify(this.tmpData)), parseInt(this.level))
+      this.downLoad(this.currentData, this.name)
     },
-    getStr(arr) {
-      if (arr.length > 3) {
-        return arr.slice(0, 3).join('')
-      } else {
-        return arr.join('')
+    downLoadDetail () {
+      if (this.uploading) {
+        this.$message.error('正在上传中，请稍后再试!')
+        return
       }
+      if (this.tmpData.length === 0) {
+        this.$message.error('您还没有选择文件呀！')
+        return false
+      }
+      let data = this.getDetailTable()
+      this.downLoad(data, this.subName)
+    },
+    getDetailTable() {
+     return this.dealData[this.selectValue] 
+    },
+    compare (prop) {
+      return function (obj1, obj2) {
+        let val1 = obj1[prop]
+        let val2 = obj2[prop]
+        if (val1 && val2) {
+          if (val1 < val2) {
+            return -1
+          } else if (val1 > val2) {
+            return 1
+          } else {
+            return 0
+          }
+        } else {
+          return 0
+        }
+      }
+    },
+    toDealData() {
+      this.getLevelTotal (this.tmpData, this.level)
     },
     getLevelTotal (data, n) {
       const outputData = []
+      const dealData = {}
       data.forEach(item => {
         const code = item['科目编号']
         if (code) {
           const len = outputData.length
+          const name = code.split('-').slice(0, n).join('-')
           if (len === 0) {
+            if (!dealData[name]) {
+              dealData[name] = [item]
+            } else {
+              dealData[name].push(item)
+            }
             outputData.push({
-              '科目编号': code.split('-').slice(0, n).join('-'),
+              '科目编号': name,
               '借方': item['借方'],
-              '贷方': item['贷方']
+              '贷方': item['贷方'],
+              '余额': this.fixedNum(parseFloat(item['借方']) - parseFloat(item['贷方']))
             })
           } else {
             const lastData = outputData[len - 1]
@@ -156,21 +206,39 @@ export default {
                 break
               }
             }
-            if (flagInd === n) {
-              outputData[len - 1]['借方'] += item['借方']
-              outputData[len - 1]['贷方'] += item['贷方']
-              outputData[len - 1]['科目编号'] = targetStr.join('-')
+            if (flagInd === n || (lastData['科目编号'] === code)) {
+              const name = targetStr.join('-')
+                if (!dealData[name]) {
+                dealData[name] = [item]
+              } else {
+                dealData[name].push(item)
+              }
+              outputData[len - 1]['借方'] += this.fixedNum(item['借方'])
+              outputData[len - 1]['贷方'] += this.fixedNum(item['贷方'])
+              outputData[len - 1]['余额'] = this.fixedNum(outputData[len - 1]['借方'] - outputData[len - 1]['贷方'] )
+              outputData[len - 1]['科目编号'] = name
             } else {
+               const name = code.split('-').slice(0, n).join('-')
+                if (!dealData[name]) {
+                dealData[name] = [item]
+              } else {
+                dealData[name].push(item)
+              }
               outputData.push({
-                '科目编号': code.split('-').slice(0, n).join('-'),
+                '科目编号': name,
                 '借方': item['借方'],
-                '贷方': item['贷方']
+                '贷方': item['贷方'],
+                '余额': this.fixedNum(parseFloat(item['借方']) - parseFloat(item['贷方']))
               })
             }
           }
         }
       })
-      this.downLoad(outputData, this.name)
+      this.currentData = outputData
+      this.dealData = dealData
+    },
+    fixedNum(value) {
+      return parseFloat(value).toFixed(2) - 0
     },
     downLoad (json, name) {
       var data = new Array();
@@ -233,6 +301,10 @@ export default {
     .input-ctrl {
       margin: 30px 0;
       line-height: 40px;
+    }
+    .tips {
+      text-align: left;
+      color: #333;
     }
   }
 }
