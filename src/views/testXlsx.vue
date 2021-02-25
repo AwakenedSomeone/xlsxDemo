@@ -2,17 +2,38 @@
   <div class="page-container">
     <h1 class="title">表格归纳demo</h1>
     <div class="content">
-      <el-upload
-        class="upload-demo"
-        action="https://jsonplaceholder.typicode.com/posts/"
-        :auto-upload="false"
-        ref="upload"
-        :multiple="false"
-        :on-change="upload"
-        :file-list="fileList">
-        <el-button size="small" type="primary">{{uploading ? '文件上传中' : '选择文件上传'}}</el-button>
-        <div slot="tip" class="el-upload__tip">只能xls或xlsx文件</div>
-      </el-upload>
+      <el-row class="input-ctrl">
+        <el-col :span="6">选择汇总表：</el-col>
+        <el-col :span="18">
+          <el-upload
+            class="upload-demo"
+            action="https://jsonplaceholder.typicode.com/posts/"
+            :auto-upload="false"
+            ref="upload"
+            :multiple="false"
+            :on-change="upload"
+            :file-list="fileList">
+            <el-button size="small" type="primary">{{uploading ? '文件上传中' : '选择文件上传'}}</el-button>
+            <div slot="tip" class="el-upload__tip">只能xls或xlsx文件</div>
+          </el-upload>
+        </el-col>
+      </el-row>
+      <el-row class="input-ctrl">
+        <el-col :span="6">选择科目映射表：</el-col>
+        <el-col :span="18">
+          <el-upload
+            class="upload-demo"
+            action="https://jsonplaceholder.typicode.com/posts/"
+            :auto-upload="false"
+            ref="upload1"
+            :multiple="false"
+            :on-change="uploadName"
+            :file-list="fileList1">
+            <el-button size="small" type="primary">{{uploading1 ? '文件上传中' : '选择文件上传'}}</el-button>
+            <div slot="tip" class="el-upload__tip">只能xls或xlsx文件</div>
+          </el-upload>
+        </el-col>
+      </el-row>
       <el-row class="input-ctrl">
         <el-col :span="6">合并层级：</el-col>
         <el-col :span="18">
@@ -69,10 +90,56 @@ export default {
       options: [],
       selectValue: '',
       subName: '明细表名称',
-      dealData: []
+      dealData: [],
+      fileList1: [],
+      uploading1: false,
+      nameJsonData: {}
     }
   },
   methods: {
+    uploadName (file, fileList) {
+      if (fileList.length > 1) {
+        this.$message.error('最多只能上传一个文件哦！')
+        this.fileList1 = []
+        return false
+      }
+      this.uploading1 = true
+      let files = {0:file.raw}
+      this.readExcel1(files);
+    },
+    readExcel1(files) {
+      // 读取科目名称映射表
+      if(files.length<=0){//如果没有文件名
+          return false;
+      }else if(!/\.(xls|xlsx)$/.test(files[0].name.toLowerCase())){
+          this.$Message.error('上传格式不正确，请上传xls或者xlsx格式');
+          return false;
+      }
+      const fileReader = new FileReader();
+      fileReader.onload = (ev) => {
+        try {
+            const data = ev.target.result;
+            const workbook = XLSX.read(data, {
+                type: 'binary'
+            });
+            const wsname = workbook.SheetNames[0];//取第一张表
+            const result = XLSX.utils.sheet_to_json(workbook.Sheets[wsname]);//生成json表格内容
+            const nameJson = {}
+            console.log(result)
+            result.forEach(item => {
+              nameJson[item['会计科目(业态:股份通用)']] = item['__EMPTY']
+            })
+           this.nameJsonData = nameJson
+           this.uploading1 = false
+        } catch (e) {
+          this.uploading1 = false
+          this.reset()
+          this.$message.error('您选择的文件可能有些问题，请检查格式是否正确呢！')
+            return false;
+        }
+      }
+      fileReader.readAsBinaryString(files[0])
+    },
     reset () {
       this.tmpData = []
       this.fileList = []
@@ -87,9 +154,9 @@ export default {
       }
       this.uploading = true
       let files = {0:file.raw}
-      this.readExcel1(files);
+      this.readExcel(files);
     },
-    readExcel1(files) {//表格导入
+    readExcel(files) {//表格导入
             var that = this;
             if(files.length<=0){//如果没有文件名
                 return false;
@@ -97,7 +164,6 @@ export default {
                 this.$Message.error('上传格式不正确，请上传xls或者xlsx格式');
                 return false;
             }
-    
             const fileReader = new FileReader();
             fileReader.onload = (ev) => {
               try {
@@ -128,6 +194,11 @@ export default {
       if (this.tmpData.length === 0) {
         this.$message.error('您还没有选择文件呀！')
         return false
+      }
+      if (this.nameJsonData.length !== 0) {
+        this.currentData.forEach(item => {
+          item['科目名称'] = this.nameJsonData[item['科目编号']]
+        })
       }
       this.downLoad(this.currentData, this.name)
     },
@@ -163,7 +234,8 @@ export default {
         }
       }
     },
-    toDealData() {
+    toDealData(e) {
+      e.target.blur()
       this.getLevelTotal (this.tmpData, this.level)
     },
     getLevelTotal (data, n) {
@@ -206,7 +278,7 @@ export default {
                 break
               }
             }
-            if (flagInd === n || (lastData['科目编号'] === code)) {
+            if (flagInd === parseInt(n) || (lastData['科目编号'] === code)) {
               const name = targetStr.join('-')
                 if (!dealData[name]) {
                 dealData[name] = [item]
@@ -294,13 +366,16 @@ export default {
   .content {
     text-align: center;
     margin: 40px auto;
-    width: 500px;
+    width: 560px;
     background: #f2f2f2;
     padding: 20px;
     border-radius: 15px;
     .input-ctrl {
       margin: 30px 0;
       line-height: 40px;
+    }
+    .upload-demo {
+      text-align: left;
     }
     .tips {
       text-align: left;
