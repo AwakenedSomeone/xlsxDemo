@@ -19,22 +19,6 @@
         </el-col>
       </el-row>
       <el-row class="input-ctrl">
-        <el-col :span="6">选择科目映射表：</el-col>
-        <el-col :span="18">
-          <el-upload
-            class="upload-demo"
-            action="https://jsonplaceholder.typicode.com/posts/"
-            :auto-upload="false"
-            ref="upload1"
-            :multiple="false"
-            :on-change="uploadName"
-            :file-list="fileList1">
-            <el-button size="small" type="primary">{{uploading1 ? '文件上传中' : '选择文件上传'}}</el-button>
-            <div slot="tip" class="el-upload__tip">只能xls或xlsx文件</div>
-          </el-upload>
-        </el-col>
-      </el-row>
-      <el-row class="input-ctrl">
         <el-col :span="6">合并层级：</el-col>
         <el-col :span="18">
           <el-input  v-model="level" placeholder="请输入需要合并的层级" @keyup.enter.native="toDealData"></el-input>
@@ -91,55 +75,11 @@ export default {
       selectValue: '',
       subName: '明细表名称',
       dealData: [],
-      fileList1: [],
-      uploading1: false,
-      nameJsonData: {}
+      nameJsonData: {},
+      doLoaing: false
     }
   },
   methods: {
-    uploadName (file, fileList) {
-      if (fileList.length > 1) {
-        this.$message.error('最多只能上传一个文件哦！')
-        this.fileList1 = []
-        return false
-      }
-      this.uploading1 = true
-      let files = {0:file.raw}
-      this.readExcel1(files);
-    },
-    readExcel1(files) {
-      // 读取科目名称映射表
-      if(files.length<=0){//如果没有文件名
-          return false;
-      }else if(!/\.(xls|xlsx)$/.test(files[0].name.toLowerCase())){
-          this.$Message.error('上传格式不正确，请上传xls或者xlsx格式');
-          return false;
-      }
-      const fileReader = new FileReader();
-      fileReader.onload = (ev) => {
-        try {
-            const data = ev.target.result;
-            const workbook = XLSX.read(data, {
-                type: 'binary'
-            });
-            const wsname = workbook.SheetNames[0];//取第一张表
-            const result = XLSX.utils.sheet_to_json(workbook.Sheets[wsname]);//生成json表格内容
-            const nameJson = {}
-            console.log(result)
-            result.forEach(item => {
-              nameJson[item['会计科目(业态:股份通用)']] = item['__EMPTY']
-            })
-           this.nameJsonData = nameJson
-           this.uploading1 = false
-        } catch (e) {
-          this.uploading1 = false
-          this.reset()
-          this.$message.error('您选择的文件可能有些问题，请检查格式是否正确呢！')
-            return false;
-        }
-      }
-      fileReader.readAsBinaryString(files[0])
-    },
     reset () {
       this.tmpData = []
       this.fileList = []
@@ -195,10 +135,9 @@ export default {
         this.$message.error('您还没有选择文件呀！')
         return false
       }
-      if (this.nameJsonData.length !== 0) {
-        this.currentData.forEach(item => {
-          item['科目名称'] = this.nameJsonData[item['科目编号']]
-        })
+      if (this.doLoaing) {
+        this.$message.error('正在处理数据中，请稍后')
+        return false
       }
       this.downLoad(this.currentData, this.name)
     },
@@ -239,21 +178,26 @@ export default {
       this.getLevelTotal (this.tmpData, this.level)
     },
     getLevelTotal (data, n) {
+      this.doLoaing = true
       const outputData = []
       const dealData = {}
       data.forEach(item => {
         const code = item['科目编号']
+        const codeName = item['科目名称']
         if (code) {
           const len = outputData.length
-          const name = code.split('-').slice(0, n).join('-')
+          const codeNum = code.split('-').slice(0, n).join('-')
+          const name = codeName.split('-').slice(0, n).join('-')
           if (len === 0) {
-            if (!dealData[name]) {
-              dealData[name] = [item]
+            if (!dealData[codeNum]) {
+              dealData[codeNum] = [item]
             } else {
-              dealData[name].push(item)
+              dealData[codeNum].push(item)
             }
+             console.log(name)
             outputData.push({
-              '科目编号': name,
+              '科目编号': codeNum,
+              '科目名称': name,
               '借方': item['借方'],
               '贷方': item['贷方'],
               '余额': this.fixedNum(parseFloat(item['借方']) - parseFloat(item['贷方']))
@@ -261,7 +205,7 @@ export default {
           } else {
             const lastData = outputData[len - 1]
             const lastArr = lastData['科目编号'].split('-')
-            const nowArr = code.split('-')
+            const nowArr = code.split('-') 
             // 按照短的比较
             let flagInd = 0
             let targetStr = []
@@ -279,25 +223,27 @@ export default {
               }
             }
             if (flagInd === parseInt(n) || (lastData['科目编号'] === code)) {
-              const name = targetStr.join('-')
-                if (!dealData[name]) {
-                dealData[name] = [item]
+              const codeNum = targetStr.join('-')
+                if (!dealData[codeNum]) {
+                dealData[codeNum] = [item]
               } else {
-                dealData[name].push(item)
+                dealData[codeNum].push(item)
               }
               outputData[len - 1]['借方'] += this.fixedNum(item['借方'])
               outputData[len - 1]['贷方'] += this.fixedNum(item['贷方'])
               outputData[len - 1]['余额'] = this.fixedNum(outputData[len - 1]['借方'] - outputData[len - 1]['贷方'] )
-              outputData[len - 1]['科目编号'] = name
+              outputData[len - 1]['科目编号'] = codeNum
             } else {
-               const name = code.split('-').slice(0, n).join('-')
-                if (!dealData[name]) {
-                dealData[name] = [item]
+               const codeNum = code.split('-').slice(0, n).join('-')
+               const name = codeName.split('-').slice(0, n).join('-')
+                if (!dealData[codeNum]) {
+                dealData[codeNum] = [item]
               } else {
-                dealData[name].push(item)
+                dealData[codeNum].push(item)
               }
               outputData.push({
-                '科目编号': name,
+                '科目编号': codeNum,
+                '科目名称': name,
                 '借方': item['借方'],
                 '贷方': item['贷方'],
                 '余额': this.fixedNum(parseFloat(item['借方']) - parseFloat(item['贷方']))
@@ -308,6 +254,7 @@ export default {
       })
       this.currentData = outputData
       this.dealData = dealData
+      this.doLoaing = false
     },
     fixedNum(value) {
       return parseFloat(value).toFixed(2) - 0
@@ -315,7 +262,6 @@ export default {
     downLoad (json, name) {
       var data = new Array();
       var keyArray = new Array();
-
       for (const key1 in json) {
           if (json.hasOwnProperty(key1)) {
               const element = json[key1];
