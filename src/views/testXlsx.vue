@@ -184,6 +184,9 @@ export default {
       data.forEach(item => {
         const code = item['科目编号']
         const codeName = item['科目名称']
+        for (let key in item) {
+          item[key.trim()] = item[key]
+        }
         if (code) {
           const len = outputData.length
           const codeNum = code.split('-').slice(0, n).join('-')
@@ -194,13 +197,12 @@ export default {
             } else {
               dealData[codeNum].push(item)
             }
-             console.log(name)
             outputData.push({
               '科目编号': codeNum,
               '科目名称': name,
-              '借方': item['借方'],
-              '贷方': item['贷方'],
-              '余额': this.fixedNum(parseFloat(item['借方']) - parseFloat(item['贷方']))
+              '借方': item['借方'] || 0,
+              '贷方': item['贷方'] || 0,
+              '余额': this.fixedNum(parseFloat(item['借方'] || 0) - parseFloat(item['贷方'] || 0))
             })
           } else {
             const lastData = outputData[len - 1]
@@ -229,8 +231,8 @@ export default {
               } else {
                 dealData[codeNum].push(item)
               }
-              outputData[len - 1]['借方'] += this.fixedNum(item['借方'])
-              outputData[len - 1]['贷方'] += this.fixedNum(item['贷方'])
+              outputData[len - 1]['借方'] += this.fixedNum(item['借方'] || 0)
+              outputData[len - 1]['贷方'] += this.fixedNum(item['贷方'] || 0)
               outputData[len - 1]['余额'] = this.fixedNum(outputData[len - 1]['借方'] - outputData[len - 1]['贷方'] )
               outputData[len - 1]['科目编号'] = codeNum
             } else {
@@ -244,9 +246,9 @@ export default {
               outputData.push({
                 '科目编号': codeNum,
                 '科目名称': name,
-                '借方': item['借方'],
-                '贷方': item['贷方'],
-                '余额': this.fixedNum(parseFloat(item['借方']) - parseFloat(item['贷方']))
+                '借方': item['借方'] || 0,
+                '贷方': item['贷方'] || 0,
+                '余额': this.fixedNum(parseFloat(item['借方'] || 0) - parseFloat(item['贷方'] || 0))
               })
             }
           }
